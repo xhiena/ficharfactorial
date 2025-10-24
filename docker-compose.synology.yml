@@ -4,8 +4,8 @@ services:
   factorial-logger:
     build: 
       context: .
-      dockerfile: Dockerfile.prod  # Change to Dockerfile.simple if needed
-    container_name: factorial-time-tracker-prod
+      dockerfile: Dockerfile.simple  # Single-stage build for Synology
+    container_name: factorial-time-tracker-synology
     restart: unless-stopped
     environment:
       # Copy these from your .env file or set them here
@@ -22,8 +22,6 @@ services:
       - ./logs:/app/logs
       # Mount your .env file (recommended for credentials)
       - ./.env:/app/.env:ro
-    labels:
-      - "traefik.enable=false"  # If using Traefik
     networks:
       - factorial-network
     healthcheck:
@@ -36,8 +34,3 @@ services:
 networks:
   factorial-network:
     driver: bridge
-
-# Optional: Use external volumes for persistence
-volumes:
-  factorial-logs:
-    driver: local
