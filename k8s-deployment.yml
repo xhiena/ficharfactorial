@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: factorial-automation
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: factorial-credentials
+  namespace: factorial-automation
+type: Opaque
+stringData:
+  email: "your-email@example.com"
+  password: "your-password"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: factorial-config
+  namespace: factorial-automation
+data:
+  WORK_START_TIME: "09:00"
+  WORK_END_TIME: "17:00"
+  CRON_SCHEDULE: "0 18 * * *"
+  HEADLESS: "true"
+  LOG_LEVEL: "info"
+  TZ: "UTC"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: factorial-time-tracker
+  namespace: factorial-automation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: factorial-time-tracker
+  template:
+    metadata:
+      labels:
+        app: factorial-time-tracker
+    spec:
+      containers:
+      - name: factorial-logger
+        image: factorial-time-tracker:latest
+        imagePullPolicy: Always
+        env:
+        - name: FACTORIAL_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: factorial-credentials
+              key: email
+        - name: FACTORIAL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: factorial-credentials
+              key: password
+        envFrom:
+        - configMapRef:
+            name: factorial-config
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - node
+            - -e
+            - console.log('OK')
+          initialDelaySeconds: 30
+          periodSeconds: 30
+      volumes:
+      - name: logs
+        persistentVolumeClaim:
+          claimName: factorial-logs
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: factorial-logs
+  namespace: factorial-automation
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

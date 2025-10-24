@@ -256,7 +256,7 @@ export class TimeTracker {
 
             const missingHoursSelectors = [
                 'span[title="-8h"]',
-                'span:has-text("-8h")', 
+                'span:has-text("-8h")',
                 'span._1jh4l1p2:has-text("-8h")',
                 '[title="-8h"]',
                 // Look for other common missing hour patterns
@@ -266,18 +266,18 @@ export class TimeTracker {
 
             let targetRow = null;
             let foundDate = 'unknown';
-            
+
             for (const selector of missingHoursSelectors) {
                 try {
                     // Get all matching spans, not just the first one
                     const missingHoursSpans = await this.page.$$(selector);
-                    
+
                     for (const span of missingHoursSpans) {
                         // Check if this span contains negative hours (missing hours)
                         const spanText = await span.textContent();
                         if (spanText && spanText.includes('-') && spanText.includes('h')) {
                             logger.info(`Found missing hours span: "${spanText}" with selector: ${selector}`);
-                            
+
                             // Find the parent table row
                             targetRow = await span.evaluateHandle(el => {
                                 let current = el.parentElement;
@@ -308,13 +308,13 @@ export class TimeTracker {
                                 } catch (e) {
                                     logger.debug('Could not determine date for row');
                                 }
-                                
+
                                 logger.info(`Found missing hours row for date ${foundDate} with missing hours: ${spanText}`);
                                 break;
                             }
                         }
                     }
-                    
+
                     if (targetRow) break;
                 } catch (e) {
                     logger.debug(`Selector ${selector} failed:`, e);
@@ -1224,7 +1224,7 @@ export class TimeTracker {
      */
     async logAnyMissingHours(): Promise<boolean> {
         logger.info('🔍 Scanning for any days with missing hours to log automatically...');
-        
+
         try {
             // Create a generic work entry with default values
             const defaultEntry: WorkEntry = {

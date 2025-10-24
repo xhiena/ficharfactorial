@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  factorial-logger:
+    image: factorial-time-tracker:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 5s
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager  # Run on manager node
+    environment:
+      - FACTORIAL_EMAIL_FILE=/run/secrets/factorial_email
+      - FACTORIAL_PASSWORD_FILE=/run/secrets/factorial_password
+      - WORK_START_TIME=09:00
+      - WORK_END_TIME=17:00
+      - CRON_SCHEDULE=0 18 * * *
+      - HEADLESS=true
+      - LOG_LEVEL=info
+      - TZ=Europe/Madrid
+    volumes:
+      - factorial-logs:/app/logs
+    secrets:
+      - factorial_email
+      - factorial_password
+    networks:
+      - factorial-network
+
+secrets:
+  factorial_email:
+    external: true
+  factorial_password:
+    external: true
+
+networks:
+  factorial-network:
+    driver: overlay
+
+volumes:
+  factorial-logs:
+    driver: local

@@ -1,0 +1,52 @@
+# Multi-stage build for production
+FROM node:18-bullseye as builder
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Production stage
+FROM node:18-bullseye-slim
+
+# Install system dependencies for Playwright
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    ca-certificates \
+    procps \
+    cron \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy node_modules from builder stage
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy application code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Install Playwright browsers
+RUN npx playwright install --with-deps chromium
+
+# Create logs directory
+RUN mkdir -p /app/logs && chmod 755 /app/logs
+
+# Copy entrypoint
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD node -e "console.log('OK')" || exit 1
+
+# Run as non-root user for security
+RUN groupadd -r factorial && useradd -r -g factorial factorial
+RUN chown -R factorial:factorial /app
+USER factorial
+
+EXPOSE 3000
+
+ENTRYPOINT ["/entrypoint.sh"]

@@ -245,7 +245,7 @@ program
             validateConfig();
 
             await automation.initialize();
-            
+
             const loginSuccess = await automation.login();
             if (!loginSuccess) {
                 throw new Error('Login failed');

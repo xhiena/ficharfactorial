@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  factorial-logger:
+    build: .
+    container_name: factorial-time-tracker-prod
+    restart: unless-stopped
+    environment:
+      # Copy these from your .env file or set them here
+      - FACTORIAL_EMAIL=${FACTORIAL_EMAIL}
+      - FACTORIAL_PASSWORD=${FACTORIAL_PASSWORD}
+      - WORK_START_TIME=${WORK_START_TIME:-09:00}
+      - WORK_END_TIME=${WORK_END_TIME:-17:00}
+      - CRON_SCHEDULE=${CRON_SCHEDULE:-0 18 * * *}
+      - HEADLESS=true
+      - LOG_LEVEL=info
+      - TZ=${TZ:-UTC}
+    volumes:
+      # Persist logs on the host
+      - ./logs:/app/logs
+      # Mount your .env file (recommended for credentials)
+      - ./.env:/app/.env:ro
+    labels:
+      - "traefik.enable=false"  # If using Traefik
+    networks:
+      - factorial-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  factorial-network:
+    driver: bridge
+
+# Optional: Use external volumes for persistence
+volumes:
+  factorial-logs:
+    driver: local
