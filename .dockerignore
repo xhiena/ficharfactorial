@@ -31,12 +31,19 @@ logs/*.png
 .DS_Store
 Thumbs.db
 
-# Docker (exclude these but keep docker/ directory contents)
-Dockerfile
-docker-compose.yml
-
 # Documentation
 README.md
+DOCKER_DEPLOYMENT.md
+SYNOLOGY_DEPLOYMENT.md
+
+# Management scripts
+deploy.ps1
+manage.ps1
+
+# Additional Docker files
+docker-compose.*.yml
+docker-stack.yml
+k8s-deployment.yml
 
 # Temporary files
 *.tmp
