@@ -40,7 +40,7 @@ RUN chmod +x /entrypoint.sh
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD node -e "console.log('OK')" || exit 1
+    CMD node -e "console.log('OK')" || exit 1
 
 # Run as non-root user for security
 RUN groupadd -r factorial && useradd -r -g factorial factorial
