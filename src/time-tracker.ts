@@ -251,42 +251,79 @@ export class TimeTracker {
         logger.info('Starting Factorial-specific time entry workflow...');
 
         try {
-            // Step 1: Find the table row with missing hours (-8h span)
-            logger.info('Looking for table row with missing hours...');
+            // Step 1: Find ANY table row with missing hours (not just specific date)
+            logger.info('Looking for ANY table row with missing hours...');
 
             const missingHoursSelectors = [
                 'span[title="-8h"]',
-                'span:has-text("-8h")',
+                'span:has-text("-8h")', 
                 'span._1jh4l1p2:has-text("-8h")',
-                '[title="-8h"]'
+                '[title="-8h"]',
+                // Look for other common missing hour patterns
+                'span[title*="-"]',
+                'span:has-text("-")',
             ];
 
             let targetRow = null;
+            let foundDate = 'unknown';
+            
             for (const selector of missingHoursSelectors) {
                 try {
-                    const missingHoursSpan = await this.page.$(selector);
-                    if (missingHoursSpan) {
-                        // Find the parent table row
-                        targetRow = await missingHoursSpan.evaluateHandle(el => {
-                            let current = el.parentElement;
-                            while (current && current.tagName !== 'TR') {
-                                current = current.parentElement;
-                            }
-                            return current;
-                        });
+                    // Get all matching spans, not just the first one
+                    const missingHoursSpans = await this.page.$$(selector);
+                    
+                    for (const span of missingHoursSpans) {
+                        // Check if this span contains negative hours (missing hours)
+                        const spanText = await span.textContent();
+                        if (spanText && spanText.includes('-') && spanText.includes('h')) {
+                            logger.info(`Found missing hours span: "${spanText}" with selector: ${selector}`);
+                            
+                            // Find the parent table row
+                            targetRow = await span.evaluateHandle(el => {
+                                let current = el.parentElement;
+                                while (current && current.tagName !== 'TR') {
+                                    current = current.parentElement;
+                                }
+                                return current;
+                            });
 
-                        if (targetRow) {
-                            logger.info(`Found missing hours row with selector: ${selector}`);
-                            break;
+                            if (targetRow) {
+                                // Try to find the date for this row for logging purposes
+                                try {
+                                    const dateCell = await targetRow.evaluateHandle(row => {
+                                        // Look for date indicators in the row
+                                        const cells = row.querySelectorAll('td');
+                                        for (const cell of cells) {
+                                            const text = cell.textContent?.trim();
+                                            if (text && /\d{1,2}/.test(text) && parseInt(text) <= 31) {
+                                                return text;
+                                            }
+                                        }
+                                        return null;
+                                    });
+                                    const dateText = await dateCell.jsonValue();
+                                    if (dateText) {
+                                        foundDate = dateText;
+                                    }
+                                } catch (e) {
+                                    logger.debug('Could not determine date for row');
+                                }
+                                
+                                logger.info(`Found missing hours row for date ${foundDate} with missing hours: ${spanText}`);
+                                break;
+                            }
                         }
                     }
+                    
+                    if (targetRow) break;
                 } catch (e) {
                     logger.debug(`Selector ${selector} failed:`, e);
                 }
             }
 
             if (!targetRow) {
-                throw new Error('Could not find table row with missing hours (-8h)');
+                logger.info('No missing hours found - all days appear to be properly logged');
+                return true; // Consider this a success - nothing to do
             }
 
             // Step 2: Click the toggle button in that row
@@ -299,7 +336,70 @@ export class TimeTracker {
                 throw new Error('Could not find toggle button with data-intercom-target="attendance-row-toggle"');
             }
 
-            logger.info('Clicking toggle button...');
+            // Check for and close any blocking modals first
+            logger.info('🔍 MODAL CHECK: Looking for blocking modals before clicking toggle button...');
+            try {
+                const modal = await this.page.$('[aria-modal="true"]');
+                logger.info(`🔍 MODAL CHECK: Found modal? ${!!modal}`);
+                if (modal) {
+                    logger.info('🚨 MODAL FOUND: Trying multiple strategies to dismiss blocking modal...');
+
+                    // Strategy 1: Look for close buttons with various selectors
+                    const closeSelectors = [
+                        'div[role="button"][aria-label="Close"]',
+                        'button[aria-label="Close"]',
+                        '[aria-label="Close"]',
+                        'button:has-text("×")',
+                        'button:has-text("✕")',
+                        '.close-button',
+                        '[data-testid="close"]'
+                    ];
+
+                    let modalClosed = false;
+                    for (const selector of closeSelectors) {
+                        try {
+                            const closeButton = await this.page.$(selector);
+                            if (closeButton) {
+                                logger.info(`Found close button with selector: ${selector}`);
+                                await closeButton.click();
+                                await this.page.waitForTimeout(1000);
+                                modalClosed = true;
+                                break;
+                            }
+                        } catch (e) {
+                            logger.debug(`Close button selector ${selector} failed:`, e);
+                        }
+                    }
+
+                    if (!modalClosed) {
+                        // Strategy 2: Press Escape key
+                        logger.info('No close button found, trying Escape key...');
+                        await this.page.keyboard.press('Escape');
+                        await this.page.waitForTimeout(1000);
+                    }
+
+                    // Strategy 3: If modal still exists, try clicking outside of it
+                    const stillHasModal = await this.page.$('[aria-modal="true"]');
+                    if (stillHasModal) {
+                        logger.info('Modal still present, trying to click outside it...');
+                        await this.page.click('body', { position: { x: 10, y: 10 } });
+                        await this.page.waitForTimeout(1000);
+                    }
+                }
+            } catch (e) {
+                logger.debug('Modal dismissal failed, continuing...', e);
+            }
+
+            logger.info('🖱️ CLICK: About to click toggle button...');
+
+            // Double check for modal right before click
+            const lastModalCheck = await this.page.$('[aria-modal="true"]');
+            if (lastModalCheck) {
+                logger.error('🚨 CRITICAL: Modal still present right before click! This will cause timeout.');
+                // Take a screenshot for debugging
+                await this.page.screenshot({ path: `logs/modal-blocking-click-${Date.now()}.png` });
+            }
+
             await toggleButton.asElement()?.click();
             await this.page.waitForTimeout(2000);
 
@@ -1116,5 +1216,61 @@ export class TimeTracker {
         }
 
         return entries;
+    }
+
+    /**
+     * Automatically log hours for any day that has missing hours
+     * This is a flexible method that doesn't care about specific dates
+     */
+    async logAnyMissingHours(): Promise<boolean> {
+        logger.info('🔍 Scanning for any days with missing hours to log automatically...');
+        
+        try {
+            // Create a generic work entry with default values
+            const defaultEntry: WorkEntry = {
+                date: new Date().toISOString().split('T')[0]!, // Today's date as fallback
+                startTime: config.workHours.defaultStartTime,
+                endTime: config.workHours.defaultEndTime,
+                breakMinutes: config.workHours.defaultBreakMinutes,
+                description: 'Automated work hours entry'
+            };
+
+            // Navigate to the time tracking page if not already there
+            const currentUrl = this.page.url();
+            if (!currentUrl.includes('attendance') && !currentUrl.includes('time')) {
+                logger.info('Navigating to time tracking page...');
+                await this.page.goto('https://app.factorialhr.com/attendance/clock-in', {
+                    timeout: 30000,
+                    waitUntil: 'load'
+                });
+                await this.page.waitForLoadState('load', { timeout: 30000 });
+                await this.page.waitForTimeout(2000);
+            }
+
+            // First, try to close any popups
+            logger.info('Looking for close button to dismiss any popups...');
+            try {
+                const closeButton = await this.page.$('div[role="button"][aria-label="Close"]');
+                if (closeButton) {
+                    logger.info('Found close button, clicking to dismiss popup...');
+                    await closeButton.click();
+                    await this.page.waitForTimeout(1000);
+                } else {
+                    logger.debug('No close button found, clicking body as fallback...');
+                    await this.page.click('body', { timeout: 2000 });
+                    await this.page.waitForTimeout(1000);
+                }
+            } catch (e) {
+                logger.debug('Could not click close button or body, continuing...');
+            }
+
+            // Use the Factorial-specific workflow to find and log any missing hours
+            logger.info('🎯 Using flexible workflow to find and log any missing hours...');
+            return await this.handleFactorialTimeEntry(defaultEntry);
+
+        } catch (error) {
+            logger.error('Failed to log missing hours automatically:', error);
+            return false;
+        }
     }
 }

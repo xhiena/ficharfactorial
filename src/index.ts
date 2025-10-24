@@ -234,6 +234,49 @@ program
     });
 
 program
+    .command('log-any')
+    .description('Automatically log hours for any day that has missing hours')
+    .action(async () => {
+        console.log(chalk.blue('🔍 Scanning for any days with missing hours to log...'));
+
+        const automation = new FactorialAutomation();
+
+        try {
+            validateConfig();
+
+            await automation.initialize();
+            
+            const loginSuccess = await automation.login();
+            if (!loginSuccess) {
+                throw new Error('Login failed');
+            }
+
+            await automation.navigateToTimeTracking();
+
+            const page = automation.currentPage;
+            if (!page) {
+                throw new Error('Page not initialized');
+            }
+
+            const timeTracker = new TimeTracker(page);
+            const success = await timeTracker.logAnyMissingHours();
+
+            if (success) {
+                console.log(chalk.green('✅ Successfully processed any missing hours!'));
+                console.log(chalk.gray('   Note: If no missing hours were found, that means all days are properly logged.'));
+            } else {
+                console.log(chalk.red('❌ Failed to process missing hours'));
+                process.exit(1);
+            }
+        } catch (error: any) {
+            console.error(chalk.red('❌ Failed to process missing hours:'), error.message);
+            process.exit(1);
+        } finally {
+            await automation.cleanup();
+        }
+    });
+
+program
     .command('debug')
     .description('Debug the Factorial attendance page interface')
     .action(async () => {

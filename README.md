@@ -91,7 +91,22 @@ npm run dev log-week
 npm run dev log-week --start 09:00 --end 17:00 --break 60
 ```
 
+### Automatically Log Any Missing Hours
+
+```bash
+# Scan for any day with missing hours and log them automatically
+npm run dev log-any
+```
+
+This flexible command will:
+
+- Scan the current time tracking view for any days with missing hours
+- Automatically log hours for any day that needs them
+- Use your default work schedule settings
+- Perfect for automation - doesn't care about specific dates
+
 ### Log Custom Date
+
 ```bash
 # Specific date with default hours
 npm run dev log-custom --date 2024-10-24
