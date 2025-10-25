@@ -14,6 +14,8 @@ export interface Config {
         headless: boolean;
         timeout: number;
         pageTimeout: number;
+        navigationTimeout: number;
+        elementTimeout: number;
     };
     workHours: {
         defaultHours: number;
@@ -36,7 +38,9 @@ export const config: Config = {
     browser: {
         headless: process.env.HEADLESS !== 'false',
         timeout: parseInt(process.env.BROWSER_TIMEOUT || '60000'),
-        pageTimeout: parseInt(process.env.PAGE_TIMEOUT || '30000')
+        pageTimeout: parseInt(process.env.PAGE_TIMEOUT || '30000'),
+        navigationTimeout: parseInt(process.env.NAVIGATION_TIMEOUT || '60000'),
+        elementTimeout: parseInt(process.env.ELEMENT_TIMEOUT || '20000')
     },
     workHours: {
         defaultHours: parseInt(process.env.DEFAULT_WORK_HOURS || '8'),

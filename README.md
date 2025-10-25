@@ -168,6 +168,35 @@ Most commands support these options:
    - Run `npm run install:browsers` again
    - Check your Node.js version (requires 18+)
 
+4. **Network timeout issues** (especially on Synology NAS):
+   - Use the Synology-specific configuration: `docker-compose -f docker-compose.synology.yml up -d`
+   - Check the [Synology Deployment Guide](docs/SYNOLOGY_DEPLOYMENT.md) for optimized settings
+   - Increase timeout values in `.env` if needed
+
+### Synology NAS Deployment
+
+For Synology NAS users experiencing network timeout issues, we provide a special configuration:
+
+1. **Quick Setup**:
+   ```bash
+   cp .env.synology .env
+   # Edit .env with your credentials
+   docker-compose -f docker-compose.synology.yml up -d
+   ```
+
+2. **Comprehensive Guide**: See [docs/SYNOLOGY_DEPLOYMENT.md](docs/SYNOLOGY_DEPLOYMENT.md)
+
+3. **Test Deployment**:
+   ```bash
+   node scripts/test-synology.js
+   ```
+
+The Synology configuration includes:
+- Extended timeouts optimized for slower NAS networks
+- Single-stage Docker build for better compatibility
+- Enhanced health checks with longer intervals
+- Specific troubleshooting for common NAS issues
+
 ### Debug Mode
 
 To see the browser in action, set `HEADLESS=false` in your `.env` file:

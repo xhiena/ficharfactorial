@@ -26,7 +26,10 @@ export class FactorialAutomation {
             });
 
             this.page = await this.context.newPage();
-            this.page.setDefaultTimeout(config.browser.pageTimeout);
+
+            // Set timeouts optimized for NAS/slower network environments
+            this.page.setDefaultTimeout(config.browser.elementTimeout);
+            this.page.setDefaultNavigationTimeout(config.browser.navigationTimeout);
 
             logger.info('Browser initialized successfully');
         } catch (error) {
@@ -42,10 +45,36 @@ export class FactorialAutomation {
 
         try {
             logger.info('Navigating to Factorial login page...');
-            await this.page.goto(config.factorial.baseUrl);
 
-            // Wait for the login page to load
-            await this.page.waitForLoadState('networkidle');
+            // Retry navigation up to 3 times for network issues
+            let navigationSuccess = false;
+            let attempts = 0;
+            const maxAttempts = 3;
+
+            while (!navigationSuccess && attempts < maxAttempts) {
+                attempts++;
+                try {
+                    logger.info(`Navigation attempt ${attempts}/${maxAttempts}...`);
+
+                    await this.page.goto(config.factorial.baseUrl, {
+                        timeout: config.browser.navigationTimeout,
+                        waitUntil: 'domcontentloaded' // Less strict than 'load', works better on slow networks
+                    });
+
+                    // Wait for the login page to load with extended timeout for NAS environments
+                    await this.page.waitForLoadState('networkidle', { timeout: config.browser.pageTimeout });
+
+                    navigationSuccess = true;
+                    logger.info('Successfully navigated to Factorial login page');
+
+                } catch (navError: any) {
+                    if (attempts === maxAttempts) {
+                        throw new Error(`Failed to navigate to Factorial after ${maxAttempts} attempts. Network issue or site unavailable. Error: ${navError.message}`);
+                    }
+                    logger.warn(`Navigation attempt ${attempts} failed, retrying in 5 seconds...`, navError.message);
+                    await this.page.waitForTimeout(5000);
+                }
+            }
 
             // Look for email input field (try multiple selectors)
             logger.info('Looking for login form...');
