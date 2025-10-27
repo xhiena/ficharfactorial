@@ -251,6 +251,10 @@ export class TimeTracker {
         logger.info('Starting Factorial-specific time entry workflow...');
 
         try {
+            // Wait for dynamic content to load (important for headless mode)
+            logger.info('Waiting for dynamic content to load...');
+            await this.page.waitForTimeout(3000);
+
             // Step 1: Find ANY table row with missing hours (not just specific date)
             logger.info('Looking for ANY table row with missing hours...');
 
@@ -310,6 +314,18 @@ export class TimeTracker {
                                 }
 
                                 logger.info(`Found missing hours row for date ${foundDate} with missing hours: ${spanText}`);
+
+                                // Quick validation: check if this row has the toggle button (not a header)
+                                const hasToggle = await targetRow.evaluate(row => {
+                                    return row.querySelector('[data-intercom-target="attendance-row-toggle"]') !== null;
+                                });
+
+                                if (!hasToggle) {
+                                    logger.debug(`Row with ${spanText} appears to be a header row (no toggle button), skipping...`);
+                                    targetRow = null; // Reset and continue looking
+                                    continue;
+                                }
+
                                 break;
                             }
                         }
