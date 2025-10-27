@@ -17,6 +17,15 @@ An automated Playwright application for logging work hours in Factorial HR. This
 - npm or yarn
 - Factorial HR account
 
+## TL;DR quick deployment
+
+```sh
+cp .env.synology .env
+# Edit .env with your credentials
+docker-compose -f docker-compose.synology.yml build 
+docker-compose -f docker-compose.synology.yml up -d
+```
+
 ## Setup
 
 1. **Clone/Download the project** (if not already done)
