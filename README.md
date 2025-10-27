@@ -13,13 +13,13 @@ An automated Playwright application for logging work hours in Factorial HR. This
 
 ## Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
 - Factorial HR account
 
 ## TL;DR quick deployment
 
-```sh
+```bash
 cp .env.synology .env
 # Edit .env with your credentials
 docker-compose -f docker-compose.synology.yml build 
@@ -31,21 +31,25 @@ docker-compose -f docker-compose.synology.yml up -d
 1. **Clone/Download the project** (if not already done)
 
 2. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 3. **Install Playwright browsers**:
+
    ```bash
    npm run install:browsers
    ```
 
 4. **Setup configuration**:
+
    ```bash
    npm run dev setup
    ```
 
 5. **Configure your credentials**:
+
    ```bash
    # Copy the example environment file
    cp .env.example .env
@@ -56,6 +60,7 @@ docker-compose -f docker-compose.synology.yml up -d
    ```
 
    Update the following variables in your `.env` file:
+
    ```env
    FACTORIAL_EMAIL=your-email@example.com
    FACTORIAL_PASSWORD=your-password
@@ -67,6 +72,7 @@ docker-compose -f docker-compose.synology.yml up -d
    ```
 
 6. **Test login**:
+
    ```bash
    npm run dev login
    ```
@@ -78,11 +84,13 @@ docker-compose -f docker-compose.synology.yml up -d
 All commands use `npm run dev` for development:
 
 ### Test Login
+
 ```bash
 npm run dev login
 ```
 
 ### Log Today's Work Hours
+
 ```bash
 # Use default hours
 npm run dev log-today
@@ -92,6 +100,7 @@ npm run dev log-today --start 08:30 --end 16:30 --break 30 --description "Projec
 ```
 
 ### Log Current Week (Monday-Friday)
+
 ```bash
 # Use default hours for all days
 npm run dev log-week
@@ -154,6 +163,7 @@ npm start login
 ### Command Line Options
 
 Most commands support these options:
+
 - `--start <time>`: Start time in HH:MM format
 - `--end <time>`: End time in HH:MM format  
 - `--break <minutes>`: Break time in minutes
@@ -163,7 +173,7 @@ Most commands support these options:
 
 ### Common Issues
 
-1. **Login fails**: 
+1. **Login fails**:
    - Check your credentials in `.env`
    - Ensure 2FA is disabled or handled properly
    - Check if Factorial's login page has changed
@@ -187,6 +197,7 @@ Most commands support these options:
 For Synology NAS users experiencing network timeout issues, we provide a special configuration:
 
 1. **Quick Setup**:
+
    ```bash
    cp .env.synology .env
    # Edit .env with your credentials
@@ -196,11 +207,13 @@ For Synology NAS users experiencing network timeout issues, we provide a special
 2. **Comprehensive Guide**: See [docs/SYNOLOGY_DEPLOYMENT.md](docs/SYNOLOGY_DEPLOYMENT.md)
 
 3. **Test Deployment**:
+
    ```bash
    node scripts/test-synology.js
    ```
 
 The Synology configuration includes:
+
 - Extended timeouts optimized for slower NAS networks
 - Single-stage Docker build for better compatibility
 - Enhanced health checks with longer intervals
@@ -217,13 +230,14 @@ HEADLESS=false
 ### Logs
 
 Check the logs for detailed information:
+
 ```bash
 tail -f logs/factorial-automation.log
 ```
 
 ## Project Structure
 
-```
+```txt
 factorial-time-tracker/
 ├── src/
 │   ├── index.ts              # CLI interface
