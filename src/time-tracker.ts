@@ -498,7 +498,42 @@ export class TimeTracker {
 
             // Step 4: Fill in the popup form
             logger.info('Filling popup form...');
-            return await this.fillFactorialPopup(entry);
+            const fillResult = await this.fillFactorialPopup(entry);
+            
+            if (fillResult) {
+                // Step 5: Verify success by checking if the "-8h" span has disappeared from the target row
+                logger.info('Verifying successful submission by checking if missing hours indicator has disappeared...');
+                try {
+                    // Wait a moment for the UI to update
+                    await this.page.waitForTimeout(2000);
+                    
+                    // Check if the target row still contains the "-8h" span
+                    const stillHasMissingHours = await targetRow.evaluate(row => {
+                        if (!row) return false;
+                        const spans = row.querySelectorAll('span');
+                        for (const span of spans) {
+                            if (span.textContent && span.textContent.includes('-') && span.textContent.includes('h')) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+                    
+                    if (stillHasMissingHours) {
+                        logger.warn('Missing hours indicator still present after submission - may not have been successful');
+                        return false;
+                    } else {
+                        logger.info('✅ Success confirmed: Missing hours indicator has disappeared from the row!');
+                        return true;
+                    }
+                } catch (verifyError: any) {
+                    logger.warn(`Could not verify success by checking missing hours indicator: ${verifyError.message}`);
+                    // Fall back to the original result from fillFactorialPopup
+                    return fillResult;
+                }
+            }
+            
+            return fillResult;
 
         } catch (error) {
             logger.error('Factorial workflow failed:', error);
@@ -703,12 +738,12 @@ export class TimeTracker {
             const successIndicators = await this.page.$$('.success, [data-testid="success"], .notification-success');
 
             if (successIndicators.length > 0) {
-                logger.info('Found success indicators - time entry successful!');
+                logger.info('Found success indicators - form submission appears successful');
                 return true;
             }
 
-            // If we're still on the same page and no errors, consider it successful
-            logger.info('No explicit success indicators found, but no errors detected');
+            // If we're still on the same page and no errors, assume form was submitted
+            logger.info('Form submitted without errors - will verify success in parent function');
             return true;
 
         } catch (error) {
