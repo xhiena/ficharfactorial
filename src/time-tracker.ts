@@ -524,6 +524,23 @@ export class TimeTracker {
                         return false;
                     } else {
                         logger.info('✅ Success confirmed: Missing hours indicator has disappeared from the row!');
+
+                        // Toggle the row back to collapse the newly logged hours
+                        // This prevents interference with subsequent entries
+                        try {
+                            logger.info('🔄 Toggling row back to collapse logged hours and prevent UI interference...');
+                            const toggleButton = await targetRow.$('[data-intercom-target="attendance-row-toggle"]');
+                            if (toggleButton) {
+                                await toggleButton.click();
+                                await this.page.waitForTimeout(1000);
+                                logger.info('✅ Row toggled back successfully - hours now collapsed');
+                            } else {
+                                logger.debug('Toggle button not found for cleanup - continuing...');
+                            }
+                        } catch (toggleError: any) {
+                            logger.debug(`Could not toggle row back: ${toggleError.message} - continuing...`);
+                        }
+
                         return true;
                     }
                 } catch (verifyError: any) {
