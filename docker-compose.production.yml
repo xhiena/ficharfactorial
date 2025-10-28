@@ -4,8 +4,8 @@ services:
   factorial-logger:
     build: 
       context: .
-      dockerfile: Dockerfile.simple  # Single-stage build for Synology
-    container_name: factorial-time-tracker-synology
+      dockerfile: Dockerfile.simple  # Single-stage build for production
+    container_name: factorial-time-tracker-production
     restart: unless-stopped
     environment:
       # Copy these from your .env file or set them here

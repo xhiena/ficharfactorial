@@ -1,27 +1,26 @@
-# Synology NAS Deployment Guide
+# Production Deployment Guide
 
-This guide provides specific instructions for deploying the Factorial Time Tracker on a Synology NAS system.
+This guide provides specific instructions for deploying the Factorial Time Tracker in production environments (including NAS systems, VPS, and dedicated servers).
 
 ## Prerequisites
 
-1. **Docker Package**: Install Docker from the Synology Package Center
-2. **SSH Access**: Enable SSH if you prefer command-line deployment
-3. **File Station**: For file management through web interface
+1. **Docker**: Ensure Docker and Docker Compose are installed
+2. **Network Access**: Reliable internet connection for accessing Factorial HR
+3. **System Resources**: Minimum 512MB RAM, 1GB storage space
 
 ## Quick Deployment
 
-### Option 1: Using Synology Docker GUI
+### Option 1: Using Docker GUI (NAS Systems)
 
 1. **Upload Files**:
-   - Create folder: `/docker/factorial-tracker/`
+   - Create folder for the project (e.g., `/your/folder/for/factorial-tracker/`)
    - Upload all project files to this folder
-   - Ensure `.env.synology` is renamed to `.env`
+   - Ensure `.env.production` is renamed to `.env`
 
 2. **Import Docker Compose**:
-   - Open Docker application in DSM
-   - Go to "Project" tab
-   - Click "Create" → "Create project via docker-compose.yml"
-   - Select `docker-compose.synology.yml`
+   - Open Docker application interface
+   - Create new project from docker-compose file
+   - Select `docker-compose.production.yml`
    - Set project name: `factorial-tracker`
 
 3. **Configure Environment**:
@@ -40,35 +39,35 @@ This guide provides specific instructions for deploying the Factorial Time Track
 
 1. **Connect via SSH**:
    ```bash
-   ssh admin@your-synology-ip
+   ssh admin@your-server-ip
    ```
 
 2. **Navigate to Docker directory**:
    ```bash
-   cd /volume1/docker/factorial-tracker
+   cd /your/folder/for/factorial-tracker
    ```
 
 3. **Copy environment file**:
    ```bash
-   cp .env.synology .env
+   cp .env.production .env
    # Edit .env with your credentials
    nano .env
    ```
 
 4. **Deploy**:
    ```bash
-   docker-compose -f docker-compose.synology.yml up -d
+   docker-compose -f docker-compose.production.yml up -d
    ```
 
 ## Network Timeout Optimization
 
-The Synology configuration includes enhanced timeouts for slower NAS networks:
+The production configuration includes enhanced timeouts for slower server networks:
 
 - **Browser Timeout**: 120 seconds (vs 30s standard)
 - **Page Navigation**: 90 seconds (vs 30s standard)
 - **Element Timeout**: 60 seconds (vs 30s standard)
 
-These settings are automatically applied when using `.env.synology`.
+These settings are automatically applied when using `.env.production`.
 
 ## Troubleshooting
 
@@ -78,7 +77,7 @@ If you see "Timeout exceeded" errors:
 
 1. **Check Internet Connection**:
    ```bash
-   docker exec factorial-time-tracker-synology ping -c 4 app.factorialhr.com
+   docker exec factorial-time-tracker-production ping -c 4 app.factorialhr.com
    ```
 
 2. **Increase Timeouts Further** (edit `.env`):
@@ -90,8 +89,8 @@ If you see "Timeout exceeded" errors:
 
 3. **Restart Container**:
    ```bash
-   docker-compose -f docker-compose.synology.yml down
-   docker-compose -f docker-compose.synology.yml up -d
+   docker-compose -f docker-compose.production.yml down
+   docker-compose -f docker-compose.production.yml up -d
    ```
 
 ### Performance Issues
@@ -108,12 +107,11 @@ If you see "Timeout exceeded" errors:
 
 1. **View Real-time Logs**:
    ```bash
-   docker logs -f factorial-time-tracker-synology
+   docker logs -f factorial-time-tracker-production
    ```
 
 2. **Check Log Files**:
-   - Access via File Station: `/docker/factorial-tracker/logs/`
-   - Or via SSH: `/volume1/docker/factorial-tracker/logs/`
+   Logs are located in the `logs` folder: `/your/folder/for/factorial-tracker/logs/`
 
 ### Common Fixes
 
@@ -148,10 +146,10 @@ The container includes health monitoring:
 docker ps | grep factorial
 
 # View health status
-docker inspect factorial-time-tracker-synology | grep Health -A 10
+docker inspect factorial-time-tracker-production | grep Health -A 10
 
 # Check last execution
-docker logs factorial-time-tracker-synology | tail -20
+docker logs factorial-time-tracker-production | tail -20
 ```
 
 ## Security Considerations
@@ -174,20 +172,9 @@ docker logs factorial-time-tracker-synology | tail -20
 - **Timezone**: Uses system timezone or TZ environment variable
 - **Manual Execution**: Use the `log-any` command for immediate execution
 
-## Support
-
-If you encounter issues specific to Synology:
-
-1. Check Synology Docker package version
-2. Review system logs in DSM Log Center
-3. Ensure sufficient RAM allocation for Docker
-4. Consider using DSM Task Scheduler as an alternative to cron
-
 ## Hardware Recommendations
 
 - **Minimum RAM**: 1GB available for Docker
 - **Storage**: At least 2GB free space for Docker images and logs
 - **Network**: Stable internet connection with reasonable speed
-- **CPU**: Any modern Synology CPU should be sufficient
-
-This configuration is optimized for Synology NAS systems and should resolve most common deployment issues.
+- **CPU**: Any modern CPU should be sufficient

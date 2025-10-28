@@ -5,8 +5,8 @@ param(
     [string]$Action
 )
 
-$ContainerName = "factorial-time-tracker-prod"
-$ComposeFile = "docker-compose.prod.yml"
+$ContainerName = "factorial-time-tracker-production"
+$ComposeFile = "docker-compose.production.yml"
 
 switch ($Action) {
     "start" {

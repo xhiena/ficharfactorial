@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 
 /**
- * Synology Deployment Test Script
+ * Production Deployment Test Script
  * 
  * This script helps test and validate the Factorial Time Tracker
- * deployment on Synology NAS systems.
+ * deployment in production environments (NAS, VPS, dedicated servers).
  */
 
 const { execSync, spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-class SynologyTester {
+class ProductionTester {
     constructor() {
         this.testResults = [];
         this.errors = [];
@@ -58,8 +58,8 @@ class SynologyTester {
         const requiredFiles = [
             'package.json',
             'Dockerfile.simple',
-            'docker-compose.synology.yml',
-            '.env.synology',
+            'docker-compose.production.yml',
+            '.env.production',
             'src/index.ts',
             'src/factorial-automation.ts',
             'src/config.ts'
@@ -74,11 +74,11 @@ class SynologyTester {
     }
 
     async testEnvironmentFile() {
-        if (!fs.existsSync('.env.synology')) {
-            throw new Error('.env.synology file not found');
+        if (!fs.existsSync('.env.production')) {
+            throw new Error('.env.production file not found');
         }
 
-        const envContent = fs.readFileSync('.env.synology', 'utf8');
+        const envContent = fs.readFileSync('.env.production', 'utf8');
         const requiredVars = [
             'BROWSER_TIMEOUT',
             'PAGE_TIMEOUT',
@@ -91,13 +91,13 @@ class SynologyTester {
                 throw new Error(`Missing environment variable: ${variable}`);
             }
         }
-        this.log('Environment file contains all required Synology optimizations');
+        this.log('Environment file contains all required production optimizations');
     }
 
     async testDockerBuild() {
-        this.log('Building Docker image for Synology (this may take a few minutes)...');
+        this.log('Building Docker image for production (this may take a few minutes)...');
         try {
-            execSync('docker build -f Dockerfile.simple -t factorial-synology-test .', {
+            execSync('docker build -f Dockerfile.simple -t factorial-production-test .', {
                 encoding: 'utf8',
                 stdio: 'pipe'
             });
@@ -132,14 +132,14 @@ class SynologyTester {
 
         // Check if enhanced timeouts are configured
         if (config.browser.pageTimeout < 60000) {
-            throw new Error('Page timeout too low for Synology (should be >= 60s)');
+            throw new Error('Page timeout too low for production environments (should be >= 60s)');
         }
 
-        if (config.browser.navigationTimeout && config.browser.navigationTimeout < 90000) {
-            throw new Error('Navigation timeout too low for Synology (should be >= 90s)');
+        if (navigationTimeout && navigationTimeout < 90000) {
+            throw new Error('Navigation timeout too low for production environments (should be >= 90s)');
         }
 
-        this.log('Timeout configurations are appropriate for Synology');
+        this.log('Timeout configurations are appropriate for production');
     }
 
     async testContainerStart() {
@@ -149,10 +149,10 @@ class SynologyTester {
             if (fs.existsSync('.env')) {
                 fs.copyFileSync('.env', '.env.backup');
             }
-            fs.copyFileSync('.env.synology', '.env');
+            fs.copyFileSync('.env.production', '.env');
 
             // Start the container in detached mode
-            execSync('docker-compose -f docker-compose.synology.yml up -d', {
+            execSync('docker-compose -f docker-compose.production.yml up -d', {
                 encoding: 'utf8'
             });
 
@@ -161,7 +161,7 @@ class SynologyTester {
             await this.sleep(10000);
 
             // Check if container is running
-            const containers = execSync('docker ps --filter name=factorial-time-tracker-synology --format "{{.Status}}"', {
+            const containers = execSync('docker ps --filter name=factorial-time-tracker-production --format "{{.Status}}"', {
                 encoding: 'utf8'
             });
 
@@ -172,7 +172,7 @@ class SynologyTester {
             this.log('Container started successfully');
 
             // Clean up
-            execSync('docker-compose -f docker-compose.synology.yml down', { encoding: 'utf8' });
+            execSync('docker-compose -f docker-compose.production.yml down', { encoding: 'utf8' });
 
             // Restore original env file
             if (fs.existsSync('.env.backup')) {
@@ -183,7 +183,7 @@ class SynologyTester {
         } catch (error) {
             // Clean up on error
             try {
-                execSync('docker-compose -f docker-compose.synology.yml down', { encoding: 'utf8' });
+                execSync('docker-compose -f docker-compose.production.yml down', { encoding: 'utf8' });
                 if (fs.existsSync('.env.backup')) {
                     fs.copyFileSync('.env.backup', '.env');
                     fs.unlinkSync('.env.backup');
@@ -217,7 +217,7 @@ class SynologyTester {
     }
 
     async runAllTests() {
-        this.log('Starting Synology deployment validation tests...');
+        this.log('Starting production deployment validation tests...');
         this.log('==========================================');
 
         await this.runTest('Docker Installation', () => this.testDockerInstallation());
@@ -253,8 +253,8 @@ class SynologyTester {
         this.log(`Failed: ${failed}`, failed > 0 ? 'error' : 'info');
 
         if (failed === 0) {
-            this.log('🎉 All tests passed! Your Synology deployment should work correctly.', 'success');
-            this.log('You can now deploy using: docker-compose -f docker-compose.synology.yml up -d');
+            this.log('🎉 All tests passed! Your production deployment should work correctly.', 'success');
+            this.log('You can now deploy using: docker-compose -f docker-compose.production.yml up -d');
         } else {
             this.log('❌ Some tests failed. Please address the following issues:', 'error');
             this.errors.forEach(error => this.log(`  - ${error}`, 'error'));
@@ -266,11 +266,11 @@ class SynologyTester {
 
 // Run tests if called directly
 if (require.main === module) {
-    const tester = new SynologyTester();
+    const tester = new ProductionTester();
     tester.runAllTests().catch(error => {
         console.error('Test runner failed:', error);
         process.exit(1);
     });
 }
 
-module.exports = SynologyTester;
+module.exports = ProductionTester;

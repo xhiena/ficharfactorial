@@ -1,7 +1,7 @@
 # PowerShell deployment script for Windows Docker server
 param(
     [string]$ImageName = "factorial-time-tracker",
-    [string]$ContainerName = "factorial-time-tracker-prod"
+    [string]$ContainerName = "factorial-time-tracker-production"
 )
 
 Write-Host "🚀 Deploying Factorial Time Tracker to production..." -ForegroundColor Green

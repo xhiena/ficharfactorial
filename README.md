@@ -7,9 +7,11 @@ An automated Playwright application for logging work hours in Factorial HR. This
 - 🔐 Automated login to Factorial HR
 - 🕐 Log work hours for specific dates
 - 📅 Batch log for entire work weeks
-- ⚙️ Configurable work schedules
-- 🛡️ Robust error handling and logging
 - 🚀 Command-line interface
+
+## Limitations
+
+- 📅 Only one time period logged per day
 
 ## Prerequisites
 
@@ -20,10 +22,10 @@ An automated Playwright application for logging work hours in Factorial HR. This
 ## TL;DR quick deployment
 
 ```bash
-cp .env.synology .env
+cp .env.production .env
 # Edit .env with your credentials
-docker-compose -f docker-compose.synology.yml build 
-docker-compose -f docker-compose.synology.yml up -d
+docker-compose -f docker-compose.production.yml build 
+docker-compose -f docker-compose.production.yml up -d
 ```
 
 ## Setup
@@ -187,34 +189,34 @@ Most commands support these options:
    - Run `npm run install:browsers` again
    - Check your Node.js version (requires 18+)
 
-4. **Network timeout issues** (especially on Synology NAS):
-   - Use the Synology-specific configuration: `docker-compose -f docker-compose.synology.yml up -d`
-   - Check the [Synology Deployment Guide](docs/SYNOLOGY_DEPLOYMENT.md) for optimized settings
+4. **Network timeout issues** (especially on NAS systems):
+   - Use the production configuration: `docker-compose -f docker-compose.production.yml up -d`
+   - Check the [Production Deployment Guide](docs/PRODUCTION_DEPLOYMENT.md) for optimized settings
    - Increase timeout values in `.env` if needed
 
-### Synology NAS Deployment
+### Production Deployment
 
-For Synology NAS users experiencing network timeout issues, we provide a special configuration:
+For production environments (NAS, VPS, dedicated servers) experiencing network timeout issues, we provide an optimized configuration:
 
 1. **Quick Setup**:
 
    ```bash
-   cp .env.synology .env
+   cp .env.production .env
    # Edit .env with your credentials
-   docker-compose -f docker-compose.synology.yml up -d
+   docker-compose -f docker-compose.production.yml up -d
    ```
 
-2. **Comprehensive Guide**: See [docs/SYNOLOGY_DEPLOYMENT.md](docs/SYNOLOGY_DEPLOYMENT.md)
+2. **Comprehensive Guide**: See [docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md)
 
 3. **Test Deployment**:
 
    ```bash
-   node scripts/test-synology.js
+   node scripts/test-production.js
    ```
 
-The Synology configuration includes:
+The production configuration includes:
 
-- Extended timeouts optimized for slower NAS networks
+- Extended timeouts optimized for various network conditions
 - Single-stage Docker build for better compatibility
 - Enhanced health checks with longer intervals
 - Specific troubleshooting for common NAS issues
@@ -233,23 +235,6 @@ Check the logs for detailed information:
 
 ```bash
 tail -f logs/factorial-automation.log
-```
-
-## Project Structure
-
-```txt
-factorial-time-tracker/
-├── src/
-│   ├── index.ts              # CLI interface
-│   ├── config.ts             # Configuration management
-│   ├── logger.ts             # Logging setup
-│   ├── factorial-automation.ts # Main automation logic
-│   └── time-tracker.ts       # Time tracking functionality
-├── logs/                     # Log files
-├── .env.example             # Environment template
-├── package.json             # Dependencies and scripts
-├── tsconfig.json           # TypeScript configuration
-└── playwright.config.ts    # Playwright configuration
 ```
 
 ## Security Notes

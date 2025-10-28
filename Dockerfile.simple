@@ -1,4 +1,4 @@
-# Simple single-stage build for Synology compatibility
+# Simple single-stage build for production compatibility
 FROM node:18-bullseye
 
 # Install system dependencies for Playwright and cron

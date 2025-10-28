@@ -34,7 +34,7 @@ Thumbs.db
 # Documentation
 README.md
 DOCKER_DEPLOYMENT.md
-SYNOLOGY_DEPLOYMENT.md
+PRODUCTION_DEPLOYMENT.md
 
 # Management scripts
 deploy.ps1
