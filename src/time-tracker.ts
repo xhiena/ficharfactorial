@@ -316,17 +316,32 @@ export class TimeTracker {
                                 logger.info(`Found missing hours row for date ${foundDate} with missing hours: ${spanText}`);
 
                                 // Quick validation: check if this row has the toggle button (not a header)
-                                const hasToggle = await targetRow.evaluate(row => {
-                                    return row.querySelector('[data-intercom-target="attendance-row-toggle"]') !== null;
-                                });
+                                try {
+                                    const hasToggle = await targetRow.evaluate(row => {
+                                        return row && row.querySelector('[data-intercom-target="attendance-row-toggle"]') !== null;
+                                    });
 
-                                if (!hasToggle) {
-                                    logger.debug(`Row with ${spanText} appears to be a header row (no toggle button), skipping...`);
-                                    targetRow = null; // Reset and continue looking
+                                    if (!hasToggle) {
+                                        logger.debug(`Row with ${spanText} appears to be a header row (no toggle button), skipping...`);
+                                        targetRow = null; // Reset and continue looking
+                                        continue;
+                                    }
+
+                                    // Double-check that we have a valid row element
+                                    const rowElement = await targetRow.jsonValue();
+                                    if (!rowElement) {
+                                        logger.debug(`Row element is null, skipping...`);
+                                        targetRow = null;
+                                        continue;
+                                    }
+
+                                    logger.info(`Validated row has toggle button - this is a data row with missing hours`);
+                                    break;
+                                } catch (evalError: any) {
+                                    logger.debug(`Row validation failed: ${evalError.message}, skipping...`);
+                                    targetRow = null;
                                     continue;
                                 }
-
-                                break;
                             }
                         }
                     }
@@ -344,9 +359,23 @@ export class TimeTracker {
 
             // Step 2: Click the toggle button in that row
             logger.info('Looking for toggle button in the target row...');
-            const toggleButton = await targetRow.evaluateHandle(row => {
-                return row.querySelector('[data-intercom-target="attendance-row-toggle"]');
-            });
+            
+            // Additional safety check
+            if (!targetRow) {
+                logger.error('Target row is null - this should not happen after validation');
+                return false;
+            }
+            
+            let toggleButton;
+            try {
+                toggleButton = await targetRow.evaluateHandle(row => {
+                    if (!row) return null;
+                    return row.querySelector('[data-intercom-target="attendance-row-toggle"]');
+                });
+            } catch (error: any) {
+                logger.error(`Failed to find toggle button: ${error.message}`);
+                return false;
+            }
 
             if (!toggleButton) {
                 throw new Error('Could not find toggle button with data-intercom-target="attendance-row-toggle"');
