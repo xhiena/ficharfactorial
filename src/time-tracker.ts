@@ -1346,7 +1346,169 @@ export class TimeTracker {
 
             // Use the Factorial-specific workflow to find and log any missing hours
             logger.info('🎯 Using flexible workflow to find and log any missing hours...');
-            return await this.handleFactorialTimeEntry(defaultEntry);
+
+            let totalProcessed = 0;
+            let hasMoreMissingHours = true;
+            let failureCount = 0;
+            let hasRefreshed = false;
+            const maxFailures = 2;
+            const maxFailuresAfterRefresh = 2;
+
+            // Keep looking for missing hours until none are found
+            while (hasMoreMissingHours) {
+                logger.info(`Starting scan iteration ${totalProcessed + 1} for missing hours...`);
+
+                const result = await this.handleFactorialTimeEntry(defaultEntry);
+
+                if (result) {
+                    totalProcessed++;
+                    failureCount = 0; // Reset failure count on success
+                    hasRefreshed = false; // Reset refresh flag on success
+                    logger.info(`✅ Successfully processed missing hours entry ${totalProcessed}`);
+
+                    // Wait a moment for the page to update
+                    await this.page.waitForTimeout(2000);
+
+                    // Check if there are still more missing hours to process
+                    try {
+                        const missingHoursSelectors = [
+                            'span[title="-8h"]',
+                            'span:has-text("-8h")',
+                            'span._1jh4l1p2:has-text("-8h")',
+                            '[title="-8h"]',
+                            'span[title*="-"]',
+                            'span:has-text("-")',
+                        ];
+
+                        let foundMoreMissing = false;
+
+                        for (const selector of missingHoursSelectors) {
+                            try {
+                                const missingHoursSpans = await this.page.$$(selector);
+
+                                for (const span of missingHoursSpans) {
+                                    const spanText = await span.textContent();
+                                    if (spanText && spanText.includes('-') && spanText.includes('h')) {
+                                        // Check if this is a data row, not a header
+                                        const parentRow = await span.evaluateHandle(el => {
+                                            let current = el.parentElement;
+                                            while (current && current.tagName !== 'TR') {
+                                                current = current.parentElement;
+                                            }
+                                            return current;
+                                        });
+
+                                        if (parentRow) {
+                                            const hasToggle = await parentRow.evaluate(row => {
+                                                return row && row.querySelector('[data-intercom-target="attendance-row-toggle"]') !== null;
+                                            });
+
+                                            if (hasToggle) {
+                                                foundMoreMissing = true;
+                                                logger.info(`Found another missing hours entry: ${spanText}`);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (foundMoreMissing) break;
+                            } catch (e) {
+                                // Continue to next selector
+                            }
+                        }
+
+                        hasMoreMissingHours = foundMoreMissing;
+
+                        if (!hasMoreMissingHours) {
+                            logger.info(`🎯 Scan complete - no more missing hours found after processing ${totalProcessed} entries`);
+                        }
+
+                    } catch (scanError: any) {
+                        logger.warn(`Error checking for more missing hours: ${scanError.message}`);
+                        hasMoreMissingHours = false; // Stop on error
+                    }
+                } else {
+                    // If processing failed, implement smart retry strategy
+                    failureCount++;
+                    logger.warn(`Failed to process missing hours entry ${totalProcessed + 1} (failure ${failureCount})`);
+
+                    if (failureCount <= maxFailures && !hasRefreshed) {
+                        // First phase: Try up to 2 more times with simple recovery
+                        logger.info(`Attempting simple recovery (${failureCount}/${maxFailures})...`);
+
+                        try {
+                            // Try to close any open popups/modals
+                            await this.page.keyboard.press('Escape');
+                            await this.page.waitForTimeout(1000);
+                            await this.page.click('body');
+                            await this.page.waitForTimeout(1000);
+                        } catch (e) {
+                            logger.debug('Simple recovery failed, continuing...');
+                        }
+
+                    } else if (failureCount <= maxFailures && hasRefreshed) {
+                        // Second phase: We already refreshed, try up to 2 more times after refresh
+                        logger.info(`Retrying after page refresh (${failureCount - maxFailures}/${maxFailuresAfterRefresh})...`);
+
+                        try {
+                            await this.page.waitForTimeout(2000);
+                        } catch (e) {
+                            logger.debug('Wait after refresh failed, continuing...');
+                        }
+
+                    } else if (failureCount === maxFailures + 1 && !hasRefreshed) {
+                        // Time to refresh the page
+                        logger.warn('Simple recovery failed multiple times, refreshing page...');
+
+                        try {
+                            await this.page.reload({ waitUntil: 'networkidle', timeout: 30000 });
+                            await this.page.waitForTimeout(3000);
+                            hasRefreshed = true;
+                            logger.info('Page refreshed successfully, will retry...');
+
+                            // Don't increment failureCount here, let it continue
+
+                        } catch (refreshError: any) {
+                            logger.error(`Page refresh failed: ${refreshError.message}, stopping scan`);
+                            hasMoreMissingHours = false;
+                        }
+
+                    } else {
+                        // We've exhausted all retry attempts (simple + refresh + post-refresh)
+                        logger.error(`Failed to process entry after ${maxFailures} simple attempts, page refresh, and ${maxFailuresAfterRefresh} post-refresh attempts. Stopping scan.`);
+                        hasMoreMissingHours = false;
+                    }
+
+                    // If we're still in retry mode, check if there are still missing hours to work with
+                    if (hasMoreMissingHours && failureCount <= (maxFailures + maxFailuresAfterRefresh + 1)) {
+                        try {
+                            const stillHasMissing = await this.page.$('span[title="-8h"]');
+                            if (!stillHasMissing) {
+                                logger.info('No more missing hours found after recovery attempt');
+                                hasMoreMissingHours = false;
+                            }
+                        } catch (checkError: any) {
+                            logger.warn(`Could not check for missing hours: ${checkError.message}, stopping scan`);
+                            hasMoreMissingHours = false;
+                        }
+                    }
+                }
+
+                // Safety check to prevent infinite loops
+                if (totalProcessed >= 10) {
+                    logger.warn('Reached maximum of 10 processed entries, stopping to prevent infinite loop');
+                    hasMoreMissingHours = false;
+                }
+            }
+
+            if (totalProcessed > 0) {
+                logger.info(`✅ Successfully processed ${totalProcessed} missing hours entries in total!`);
+                return true;
+            } else {
+                logger.info('No missing hours found - all days appear to be properly logged');
+                return true;
+            }
 
         } catch (error) {
             logger.error('Failed to log missing hours automatically:', error);
