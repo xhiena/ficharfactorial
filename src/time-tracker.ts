@@ -499,14 +499,14 @@ export class TimeTracker {
             // Step 4: Fill in the popup form
             logger.info('Filling popup form...');
             const fillResult = await this.fillFactorialPopup(entry);
-            
+
             if (fillResult) {
                 // Step 5: Verify success by checking if the "-8h" span has disappeared from the target row
                 logger.info('Verifying successful submission by checking if missing hours indicator has disappeared...');
                 try {
                     // Wait a moment for the UI to update
                     await this.page.waitForTimeout(2000);
-                    
+
                     // Check if the target row still contains the "-8h" span
                     const stillHasMissingHours = await targetRow.evaluate(row => {
                         if (!row) return false;
@@ -518,7 +518,7 @@ export class TimeTracker {
                         }
                         return false;
                     });
-                    
+
                     if (stillHasMissingHours) {
                         logger.warn('Missing hours indicator still present after submission - may not have been successful');
                         return false;
@@ -532,7 +532,7 @@ export class TimeTracker {
                     return fillResult;
                 }
             }
-            
+
             return fillResult;
 
         } catch (error) {
