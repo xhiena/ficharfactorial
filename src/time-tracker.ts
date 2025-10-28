@@ -359,13 +359,13 @@ export class TimeTracker {
 
             // Step 2: Click the toggle button in that row
             logger.info('Looking for toggle button in the target row...');
-            
+
             // Additional safety check
             if (!targetRow) {
                 logger.error('Target row is null - this should not happen after validation');
                 return false;
             }
-            
+
             let toggleButton;
             try {
                 toggleButton = await targetRow.evaluateHandle(row => {
