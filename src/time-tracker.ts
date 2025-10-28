@@ -10,6 +10,12 @@ export interface WorkEntry {
     description?: string;
 }
 
+export interface ProcessResult {
+    success: boolean;
+    date?: string;
+    missingHours?: string;
+}
+
 export class TimeTracker {
     constructor(private page: Page) { }
 
@@ -49,10 +55,13 @@ export class TimeTracker {
 
             try {
                 logger.info('Using Factorial-specific workflow...');
-                success = await this.handleFactorialTimeEntry(entry);
+                const result = await this.handleFactorialTimeEntry(entry);
+                success = result.success;
 
                 if (!success) {
                     throw new Error('Factorial workflow failed');
+                } else if (result.date && result.missingHours) {
+                    logger.info(`📅 Successfully logged hours for ${result.date} (was missing ${result.missingHours})`);
                 }
 
             } catch (error) {
@@ -247,8 +256,11 @@ export class TimeTracker {
         throw new Error('Could not find any interactive elements to add time entries. The interface might use a different pattern than expected.');
     }
 
-    private async handleFactorialTimeEntry(entry: WorkEntry): Promise<boolean> {
+    private async handleFactorialTimeEntry(entry: WorkEntry): Promise<ProcessResult> {
         logger.info('Starting Factorial-specific time entry workflow...');
+
+        let foundDate = 'unknown';
+        let spanText = '-8h';
 
         try {
             // Wait for dynamic content to load (important for headless mode)
@@ -354,7 +366,7 @@ export class TimeTracker {
 
             if (!targetRow) {
                 logger.info('No missing hours found - all days appear to be properly logged');
-                return true; // Consider this a success - nothing to do
+                return { success: true }; // Consider this a success - nothing to do
             }
 
             // Step 2: Click the toggle button in that row
@@ -363,7 +375,7 @@ export class TimeTracker {
             // Additional safety check
             if (!targetRow) {
                 logger.error('Target row is null - this should not happen after validation');
-                return false;
+                return { success: false, date: foundDate, missingHours: spanText };
             }
 
             let toggleButton;
@@ -374,7 +386,7 @@ export class TimeTracker {
                 });
             } catch (error: any) {
                 logger.error(`Failed to find toggle button: ${error.message}`);
-                return false;
+                return { success: false, date: foundDate, missingHours: spanText };
             }
 
             if (!toggleButton) {
@@ -521,7 +533,7 @@ export class TimeTracker {
 
                     if (stillHasMissingHours) {
                         logger.warn('Missing hours indicator still present after submission - may not have been successful');
-                        return false;
+                        return { success: false, date: foundDate, missingHours: spanText };
                     } else {
                         logger.info('✅ Success confirmed: Missing hours indicator has disappeared from the row!');
 
@@ -541,20 +553,20 @@ export class TimeTracker {
                             logger.debug(`Could not toggle row back: ${toggleError.message} - continuing...`);
                         }
 
-                        return true;
+                        return { success: true, date: foundDate, missingHours: spanText };
                     }
                 } catch (verifyError: any) {
                     logger.warn(`Could not verify success by checking missing hours indicator: ${verifyError.message}`);
                     // Fall back to the original result from fillFactorialPopup
-                    return fillResult;
+                    return { success: fillResult, date: foundDate, missingHours: spanText };
                 }
             }
 
-            return fillResult;
+            return { success: fillResult, date: foundDate, missingHours: spanText };
 
         } catch (error) {
             logger.error('Factorial workflow failed:', error);
-            return false;
+            return { success: false, date: foundDate, missingHours: spanText };
         }
     }
 
@@ -1377,11 +1389,17 @@ export class TimeTracker {
 
                 const result = await this.handleFactorialTimeEntry(defaultEntry);
 
-                if (result) {
+                if (result.success) {
                     totalProcessed++;
                     failureCount = 0; // Reset failure count on success
                     hasRefreshed = false; // Reset refresh flag on success
-                    logger.info(`✅ Successfully processed missing hours entry ${totalProcessed}`);
+
+                    // Log the specific day that was processed
+                    if (result.date && result.missingHours) {
+                        logger.info(`✅ Successfully processed missing hours entry ${totalProcessed} - ${result.date} (was missing ${result.missingHours})`);
+                    } else {
+                        logger.info(`✅ Successfully processed missing hours entry ${totalProcessed}`);
+                    }
 
                     // Wait a moment for the page to update
                     await this.page.waitForTimeout(2000);
